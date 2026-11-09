@@ -1,0 +1,874 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="One IQ-style reasoning puzzle a day, the same for everyone.">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}</style>
+<title>DailyQ</title>
+</head>
+<body>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: one answer-sheet column. Form strip on top, the item sheet with OMR timing marks down its edge, pencil-bubble answers, then the score slip. */
+:root{
+  --paper:#ECEEF2;
+  --sheet:#FFFFFF;
+  --ink:#1D2127;
+  --muted:#5B636E;
+  --line:#D8DBE1;
+  --dropout:#C93A57;
+  --dropout-soft:#FBE6EB;
+  --good:#16774C;
+  --good-soft:#E2F2E9;
+  --bad:#B3261E;
+  --bad-soft:#FCE8E6;
+  --scrim:rgba(236,238,242,.55);
+  --f-display:"Libre Franklin","Franklin Gothic Medium","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Libre Franklin",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#111317; --sheet:#1A1D23; --ink:#E6E8EC; --muted:#9BA2AD; --line:#30343C;
+    --dropout:#EE7C93; --dropout-soft:#3A2028; --good:#5CC995; --good-soft:#163428;
+    --bad:#F28B82; --bad-soft:#3D1F1D; --scrim:rgba(17,19,23,.55); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#111317; --sheet:#1A1D23; --ink:#E6E8EC; --muted:#9BA2AD; --line:#30343C;
+  --dropout:#EE7C93; --dropout-soft:#3A2028; --good:#5CC995; --good-soft:#163428;
+  --bad:#F28B82; --bad-soft:#3D1F1D; --scrim:rgba(17,19,23,.55); color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2.5px solid var(--dropout);outline-offset:2px}
+.wrap{max-width:640px;margin:0 auto;padding-block:20px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:16px}
+
+/* top bar */
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--f-display);font-weight:900;font-size:28px;letter-spacing:-.025em;line-height:1}
+.brand .mark{width:30px;height:30px;border-radius:50%;border:2px solid var(--dropout);display:grid;place-items:center;position:relative}
+.brand .mark::after{content:"";width:16px;height:16px;border-radius:50%;background:var(--ink)}
+.brand .iq{color:var(--dropout)}
+.brand small{font-family:var(--f-mono);font-weight:500;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--dropout);align-self:flex-end;padding-bottom:3px}
+.tools{display:flex;gap:8px}
+.ghost{background:transparent;border:1.5px solid var(--line);border-radius:6px;padding:7px 12px;font-family:var(--f-mono);font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+.ghost:hover{border-color:var(--ink)}
+
+/* form strip */
+.formstrip{display:flex;flex-wrap:wrap;border-block:1.5px solid var(--dropout);font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dropout)}
+.formstrip span{padding:7px 12px;border-right:1px solid var(--dropout)}
+.formstrip span:last-child{border-right:0;margin-left:auto}
+.formstrip b{font-weight:600;color:var(--ink)}
+
+/* sheet */
+.sheet{position:relative;background:var(--sheet);border:1px solid var(--line);border-radius:4px;padding:22px 22px 24px 42px;overflow:hidden}
+.sheet::before{content:"";position:absolute;left:14px;top:22px;bottom:22px;width:11px;background:repeating-linear-gradient(to bottom,var(--ink) 0 4px,transparent 4px 17px);opacity:.85}
+.sheet-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:14px}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.clock{font-family:var(--f-mono);font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink);display:flex;align-items:center;gap:6px}
+.clock::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--dropout)}
+.clock.stopped::before{background:var(--muted)}
+.content{display:grid;gap:20px;transition:filter .3s}
+.prompt{font-family:var(--f-display);font-weight:700;font-size:21px;line-height:1.3;letter-spacing:-.01em;margin:0;text-wrap:balance}
+.prompt.long{font-size:18px;font-weight:500;line-height:1.5;text-wrap:pretty;max-width:60ch}
+.prompt b{font-weight:800}
+.mono{font-family:var(--f-mono)}
+.mark-label{margin:0 0 -8px;font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--dropout)}
+
+/* gate */
+.sheet.locked .content{filter:blur(13px);pointer-events:none;user-select:none}
+.gate{position:absolute;inset:0;display:grid;place-items:center;background:var(--scrim);padding:20px}
+.gate-card{background:var(--sheet);border:1.5px solid var(--ink);border-radius:6px;padding:22px;max-width:340px;display:grid;gap:10px;text-align:left;box-shadow:0 10px 30px rgba(0,0,0,.12)}
+.gate-card .eyebrow{color:var(--dropout)}
+.gate-title{font-family:var(--f-display);font-weight:900;font-size:24px;line-height:1.1;margin:0;letter-spacing:-.02em}
+.gate-card p{margin:0;color:var(--muted)}
+
+/* visuals */
+.visual{display:flex;justify-content:center;min-width:0;overflow-x:auto}
+.seq{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.cell{font-family:var(--f-mono);font-size:20px;font-weight:500;font-variant-numeric:tabular-nums;min-width:3em;padding:10px 8px;border:1.5px solid var(--ink);border-radius:4px;text-align:center}
+.q{color:var(--dropout)}
+.cell.q{border:1.5px dashed var(--dropout)}
+.matrix{display:grid;grid-template-columns:repeat(3,1fr);width:min(100%,330px);border:1.5px solid var(--ink)}
+.mcell{aspect-ratio:1;border:.75px solid var(--line);display:grid;place-items:center;padding:9%;color:var(--ink)}
+.mcell svg{width:100%;height:auto;display:block}
+.mcell.q{background:var(--dropout-soft);font-family:var(--f-mono);font-size:30px;font-weight:600}
+.series{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;width:100%}
+.panel{aspect-ratio:1;border:1.5px solid var(--line);border-radius:4px;display:grid;place-items:center;color:var(--ink);max-width:100%}
+.panel svg{width:100%;height:auto;display:block}
+.panel.q{border:1.5px dashed var(--dropout);background:var(--dropout-soft);font-family:var(--f-mono);font-size:26px;font-weight:600}
+.eqs{display:grid;gap:12px;justify-items:start}
+.eq{display:flex;align-items:center;gap:8px;font-family:var(--f-mono);font-size:22px;font-weight:500}
+.eq.ask{border-top:1.5px dashed var(--line);padding-top:12px}
+.sym{width:32px;height:32px;color:var(--ink);flex:none}
+.op{color:var(--muted)}
+.ngrid{border-collapse:collapse;font-family:var(--f-mono);font-size:24px;font-weight:500;font-variant-numeric:tabular-nums}
+.ngrid td{width:72px;height:64px;border:1.5px solid var(--ink);text-align:center}
+.ngrid td.q{background:var(--dropout-soft);border-style:dashed;border-color:var(--dropout)}
+.codebox{display:grid;grid-template-columns:auto auto auto;gap:10px 14px;align-items:center;font-family:var(--f-mono);font-size:22px;font-weight:500;letter-spacing:.14em}
+.codebox .arrow{color:var(--muted);letter-spacing:0}
+.analogy{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;font-family:var(--f-display);font-weight:800;font-size:19px;letter-spacing:.04em;text-transform:uppercase}
+.analogy span{border:1.5px solid var(--ink);border-radius:4px;padding:6px 10px}
+.analogy span.q{border:1.5px dashed var(--dropout);min-width:3em;text-align:center}
+.analogy i{font-style:normal;font-family:var(--f-mono);color:var(--muted)}
+.clues{list-style:none;margin:0;padding:0;display:grid;gap:8px;width:100%}
+.clues li{display:flex;gap:12px;align-items:baseline;padding:10px 12px;border:1px solid var(--line);border-radius:4px}
+.clues li span{font-family:var(--f-mono);font-size:12px;color:var(--dropout);flex:none}
+
+/* options */
+.opts{display:grid;gap:8px}
+.opts.tiles,.opts.figs{grid-template-columns:repeat(var(--cols),minmax(0,1fr))}
+.opt{display:flex;align-items:center;gap:14px;padding:11px 14px;border:1.5px solid var(--line);background:var(--sheet);border-radius:6px;text-align:left;cursor:pointer;min-width:0;transition:border-color .15s,background .15s}
+.opt:hover:not(:disabled){border-color:var(--ink)}
+.opt:disabled{cursor:default}
+.bubble{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--dropout);color:var(--dropout);font-family:var(--f-mono);font-size:13px;font-weight:600;display:grid;place-items:center;flex:none;transition:background .15s,color .15s}
+.otext{min-width:0;overflow-wrap:anywhere;font-size:17px;font-weight:500}
+.opts.mono .otext{font-family:var(--f-mono);letter-spacing:.12em;font-size:18px}
+.opts.tiles .opt,.opts.figs .opt{flex-direction:column-reverse;justify-content:center;gap:10px;padding:14px 6px 10px}
+.opts.tiles .otext{font-family:var(--f-mono);font-size:22px;font-variant-numeric:tabular-nums;text-align:center}
+.opts.figs .otext{width:100%;max-width:120px;color:var(--ink)}
+.opts.figs .otext svg{width:100%;height:auto;display:block}
+.opt[aria-pressed="true"]{border-color:var(--ink)}
+.opt[aria-pressed="true"] .bubble{background:var(--ink);border-color:var(--ink);color:var(--sheet)}
+.opt.is-correct{border-color:var(--good);background:var(--good-soft)}
+.opt.is-correct .bubble{background:var(--good);border-color:var(--good);color:var(--sheet)}
+.opt.is-wrong{border-color:var(--bad);background:var(--bad-soft)}
+.opt.is-wrong .bubble{background:var(--bad);border-color:var(--bad);color:var(--sheet)}
+.opt.dim{opacity:.55}
+.primary{background:var(--ink);color:var(--sheet);border:0;border-radius:6px;padding:14px 22px;font-family:var(--f-display);font-weight:800;font-size:16px;letter-spacing:.01em;cursor:pointer;width:100%}
+.primary:disabled{opacity:.35;cursor:not-allowed}
+.secondary{background:transparent;border:1.5px solid var(--ink);border-radius:6px;padding:12px 18px;font-family:var(--f-display);font-weight:700;font-size:15px;cursor:pointer}
+.hint{margin:-10px 0 0;font-size:13px;color:var(--muted);text-align:center}
+
+/* result slip */
+.slip{background:var(--sheet);border:1px solid var(--line);border-radius:4px;padding:22px;display:grid;gap:18px}
+.verdict{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.stamp{font-family:var(--f-display);font-weight:900;font-size:26px;letter-spacing:-.02em;text-transform:uppercase;border:3px solid currentColor;border-radius:4px;padding:2px 10px;transform:rotate(-2deg)}
+.slip.ok .stamp{color:var(--good)}
+.slip.no .stamp{color:var(--bad)}
+.bigtime{font-family:var(--f-mono);font-size:30px;font-weight:600;font-variant-numeric:tabular-nums}
+.bigtime small{display:block;font-size:11px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:right}
+.why h3,.slip h3{margin:0 0 6px;font-family:var(--f-mono);font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--dropout)}
+.why p{margin:0;max-width:62ch}
+.why .sym{width:1.25em;height:1.25em;vertical-align:-.25em}
+.statrow{display:grid;grid-template-columns:repeat(4,1fr);border-block:1.5px solid var(--ink)}
+.stat{padding:10px 8px;border-right:1px solid var(--line);text-align:center}
+.stat:last-child{border-right:0}
+.stat b{display:block;font-family:var(--f-mono);font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.2}
+.stat span{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.week{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.week .d{display:grid;justify-items:center;gap:4px;font-family:var(--f-mono);font-size:10.5px;color:var(--muted);text-transform:uppercase}
+.week .dot{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--line)}
+.week .dot.w{background:var(--good);border-color:var(--good)}
+.week .dot.l{background:var(--bad);border-color:var(--bad)}
+.week .dot.t{outline:2px solid var(--dropout);outline-offset:2px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.actions .primary{width:auto;flex:1 1 180px}
+.actions .secondary{flex:1 1 160px}
+.next{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+.next b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+#sharebox{width:100%;font-family:var(--f-mono);font-size:13px;padding:10px;border:1px solid var(--line);border-radius:4px;background:var(--paper);color:var(--ink);resize:none}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--sheet);font-family:var(--f-mono);font-size:13px;padding:8px 14px;border-radius:4px;z-index:30}
+.foot{font-size:13px;color:var(--muted);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center}
+.linkbtn{background:none;border:0;padding:0;color:var(--ink);font-weight:600;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+
+/* overlay */
+.overlay{position:fixed;inset:0;background:rgba(10,12,16,.5);display:grid;place-items:center;z-index:20;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.modal{background:var(--sheet);border-radius:6px;max-width:520px;width:100%;max-height:100%;overflow:auto;padding:22px;display:grid;gap:14px;border:1.5px solid var(--ink)}
+.modal h2{margin:0;font-family:var(--f-display);font-weight:900;font-size:24px;letter-spacing:-.02em}
+.modal p{margin:0}
+.modal ul{margin:0;padding-left:1.1em;display:grid;gap:4px}
+.modal .cats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 16px;list-style:none;padding:0;font-size:14px}
+.modal .cats li span{font-family:var(--f-mono);color:var(--dropout);font-size:12px;margin-right:6px}
+.modal-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.bytype{display:grid;gap:6px;font-size:14px}
+.bytype div{display:grid;grid-template-columns:1fr auto;gap:12px;border-bottom:1px solid var(--line);padding-bottom:4px}
+.bytype b{font-family:var(--f-mono);font-weight:500;font-variant-numeric:tabular-nums}
+
+@media (max-width:520px){
+  .sheet{padding:18px 16px 20px 34px}
+  .sheet::before{left:11px;width:9px}
+  .series{grid-template-columns:repeat(3,1fr)}
+  .opts.tiles,.opts.figs{grid-template-columns:repeat(min(var(--cols),3),minmax(0,1fr))}
+  .prompt{font-size:19px}
+  .ngrid td{width:60px;height:56px;font-size:21px}
+  .codebox{font-size:18px;letter-spacing:.1em}
+  .statrow .stat b{font-size:20px}
+  .formstrip span:last-child{margin-left:0}
+  .modal .cats{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:no-preference){
+  .stamp{animation:stamp .35s cubic-bezier(.2,1.6,.4,1) both}
+  @keyframes stamp{from{transform:rotate(-2deg) scale(1.5);opacity:0}to{transform:rotate(-2deg) scale(1);opacity:1}}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand" aria-label="DailyQ"><span class="mark" aria-hidden="true"></span><span>Da<span class="iq">i</span>ly<span class="iq">Q</span></span></div>
+    <nav class="tools">
+      <button class="ghost" id="btn-help" type="button">How to play</button>
+      <button class="ghost" id="btn-stats" type="button">Stats</button>
+    </nav>
+  </header>
+  <main id="app" aria-live="polite"></main>
+  <footer class="foot">
+    <span>One item a day, the same for every player. New item at midnight, your local time.</span>
+    <button class="linkbtn" id="btn-practice" type="button">Practice mode</button>
+  </footer>
+</div>
+<div class="overlay" id="ov" hidden><div class="modal" role="dialog" aria-modal="true" aria-labelledby="ov-title" id="ovbody"></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+// GEN-START
+/* ---------- seeded randomness ---------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function hashStr(s){let h=1779033703^s.length;for(let i=0;i<s.length;i++){h=Math.imul(h^s.charCodeAt(i),3432918353);h=h<<13|h>>>19}h=Math.imul(h^h>>>16,2246822507);h=Math.imul(h^h>>>13,3266489909);return(h^h>>>16)>>>0}
+function Rng(seed){const f=mulberry32(seed);return{
+  next:f,int:(a,b)=>a+Math.floor(f()*(b-a+1)),pick:arr=>arr[Math.floor(f()*arr.length)],
+  shuffle:arr=>{const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(f()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a},
+  chance:p=>f()<p}}
+const L=i=>String.fromCharCode(65+i);
+const mod=(a,n)=>((a%n)+n)%n;
+const signed=c=>c>=0?`+ ${c}`:`− ${-c}`;
+
+/* ---------- option helpers ---------- */
+function finalize(r,correct,cands,n,keyFn=String){
+  const seen=new Set([keyFn(correct)]);const out=[];
+  for(const c of cands){if(c==null)continue;const k=keyFn(c);if(seen.has(k))continue;seen.add(k);out.push(c);if(out.length===n-1)break}
+  if(out.length<n-1)return null;
+  const opts=r.shuffle([correct,...out]);
+  return{options:opts,answer:opts.indexOf(correct)};
+}
+function nearNums(r,ans,count){
+  const base=Math.max(4,Math.round(Math.abs(ans)*.07));const out=[];
+  for(let i=0;i<count;i++){const mag=r.pick([1,2,3,base,2*base,Math.ceil(base/2)]);out.push(ans+(r.chance(.5)?mag:-mag))}
+  return out;
+}
+function numOpts(r,ans,extra,n=5){
+  const traps=r.shuffle(extra.filter(x=>Number.isInteger(x)&&x>0&&x!==ans)).slice(0,3);
+  const near=nearNums(r,ans,16).filter(x=>x>0);
+  return finalize(r,ans,[...traps,...near],n);
+}
+// pick k distractors so the answer is never simply the "most common value" in every attribute
+function sampleNoConsensus(r,ans,pool,k,keys){
+  let pick=null;
+  for(let t=0;t<300;t++){
+    pick=r.shuffle(pool).slice(0,k);const all=[ans,...pick];let consensus=true;
+    for(const key of keys){const cnt={};all.forEach(o=>cnt[o[key]]=(cnt[o[key]]||0)+1);const av=cnt[ans[key]];
+      if(Object.keys(cnt).some(v=>v!==String(ans[key])&&cnt[v]>=av)){consensus=false;break}}
+    if(!consensus)return pick;
+  }
+  return pick;
+}
+function pack(o){
+  if(!o.fin)return null;
+  return{prompt:o.prompt,visual:o.visual||'',options:o.fin.options.map(o.render||String),answer:o.fin.answer,
+    kind:o.kind||'list',cols:o.cols||o.fin.options.length,explain:o.explain,long:!!o.long,mono:!!o.mono};
+}
+
+/* ---------- drawing ---------- */
+let UID=0;
+function shapeEl(s,cx,cy,R,fill,sw=3){
+  const pts=(n,rad,rot)=>Array.from({length:n},(_,i)=>{const a=(rot+i*360/n)*Math.PI/180;return`${(cx+rad*Math.cos(a)).toFixed(1)},${(cy+rad*Math.sin(a)).toFixed(1)}`}).join(' ');
+  const at=`fill="${fill}" stroke="currentColor" stroke-width="${sw}" stroke-linejoin="round"`;
+  switch(s){
+    case'circle':return`<circle cx="${cx}" cy="${cy}" r="${R}" ${at}/>`;
+    case'square':return`<rect x="${(cx-R*.85).toFixed(1)}" y="${(cy-R*.85).toFixed(1)}" width="${(R*1.7).toFixed(1)}" height="${(R*1.7).toFixed(1)}" ${at}/>`;
+    case'triangle':{const c2=cy+R*.18;return`<polygon points="${Array.from({length:3},(_,i)=>{const a=(-90+i*120)*Math.PI/180;return`${(cx+R*1.2*Math.cos(a)).toFixed(1)},${(c2+R*1.2*Math.sin(a)).toFixed(1)}`}).join(' ')}" ${at}/>`}
+    case'diamond':return`<polygon points="${pts(4,R*1.18,-90)}" ${at}/>`;
+    case'hexagon':return`<polygon points="${pts(6,R*1.06,0)}" ${at}/>`;
+    case'star':{const p=[];for(let i=0;i<10;i++){const rad=i%2?R*.52:R*1.22;const a=(-90+i*36)*Math.PI/180;p.push(`${(cx+rad*Math.cos(a)).toFixed(1)},${(cy+rad*Math.sin(a)).toFixed(1)}`)}return`<polygon points="${p.join(' ')}" ${at}/>`}
+  }
+}
+const hatch=id=>`<defs><pattern id="${id}" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="7" stroke="currentColor" stroke-width="3"/></pattern></defs>`;
+const fillOf=(f,id)=>f==='solid'?'currentColor':f==='outline'?'none':`url(#${id})`;
+function figSVG(fig){
+  const id='hq'+(++UID);
+  const lay={1:[[50,50,22]],2:[[29,50,15]  ,[71,50,15]],3:[[50,27,13],[27,70,13],[73,70,13]]};
+  return`<svg viewBox="0 0 100 100" role="img" aria-label="${fig.n} ${FILL_NAME[fig.f]} ${SHAPE_NAME[fig.s][fig.n>1?1:0]}">${hatch(id)}${lay[fig.n].map(([x,y,R])=>shapeEl(fig.s,x,y,R,fillOf(fig.f,id))).join('')}</svg>`;
+}
+const CORNERS=[[17,17],[83,17],[83,83],[17,83]];
+function arrowSVG(fr){
+  const id='ha'+(++UID);const c=CORNERS[fr.d];
+  return`<svg viewBox="0 0 100 100" role="img" aria-label="arrow pointing ${DIRS[fr.a/45]}, dot ${CORNER_NAME[fr.d]}, ${FILL_NAME[fr.f]}">${hatch(id)}<g transform="rotate(${fr.a} 50 50)"><polygon points="50,20 69,45 57,45 57,79 43,79 43,45 31,45" fill="${fillOf(fr.f,id)}" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></g><circle cx="${c[0]}" cy="${c[1]}" r="7" fill="currentColor"/></svg>`;
+}
+const symSVG=s=>`<svg class="sym" viewBox="0 0 40 40" aria-label="${s}" role="img">${shapeEl(s,20,20,12.5,'currentColor',2)}</svg>`;
+
+const SHAPES=['circle','square','triangle','diamond','hexagon','star'];
+const SHAPE_NAME={circle:['circle','circles'],square:['square','squares'],triangle:['triangle','triangles'],diamond:['diamond','diamonds'],hexagon:['hexagon','hexagons'],star:['star','stars']};
+const FILL_NAME={solid:'solid',outline:'hollow',hatched:'striped'};
+const DIRS=['up','up-right','right','down-right','down','down-left','left','up-left'];
+const CORNER_NAME=['top-left','top-right','bottom-right','bottom-left'];
+
+/* ---------- 1. matrix reasoning ---------- */
+function genMatrix(r){
+  const shapes=r.shuffle(SHAPES).slice(0,3),counts=r.shuffle([1,2,3]),fills=r.shuffle(['solid','outline','hatched']);
+  const RF={row:(i,j)=>i,col:(i,j)=>j,latA:(i,j)=>(i+j)%3,latB:(i,j)=>(j-i+3)%3};
+  let sr,cr,fr;
+  do{sr=r.pick(['latA','latB']);cr=r.pick(['row','col','latA','latB']);fr=r.pick(['row','col','latA','latB'])}
+  while([sr,cr,fr].filter(x=>x.startsWith('lat')).length<2||(sr===cr&&cr===fr));
+  const grid=[];for(let i=0;i<3;i++)for(let j=0;j<3;j++)grid.push({s:shapes[RF[sr](i,j)],n:counts[RF[cr](i,j)],f:fills[RF[fr](i,j)]});
+  const ans=grid[8];
+  const pool=[];for(const s of shapes)for(const n of counts)for(const f of fills){const d=(s!==ans.s)+(n!==ans.n)+(f!==ans.f);if(d>=1&&d<=2)pool.push({s,n,f})}
+  const fin=finalize(r,ans,sampleNoConsensus(r,ans,pool,5,['s','n','f']),6,o=>o.s+o.n+o.f);
+  const desc=(rule,word,vals)=>rule==='row'?`each row keeps a single ${word}`:rule==='col'?`each column keeps a single ${word}`:`every row and every column has each ${word} (${vals}) exactly once`;
+  const sent=s=>s[0].toUpperCase()+s.slice(1);
+  const explain=`Shape: ${desc(sr,'shape',shapes.map(s=>SHAPE_NAME[s][0]).join(', '))}. Number: ${desc(cr,'count','1, 2, 3')}. Fill: ${desc(fr,'fill',fills.map(f=>FILL_NAME[f]).join(', '))}. ${sent(`that makes the missing panel ${ans.n} ${FILL_NAME[ans.f]} ${SHAPE_NAME[ans.s][ans.n>1?1:0]}.`)}`;
+  return pack({prompt:'Which panel completes the grid?',
+    visual:`<div class="matrix">${grid.map((g,i)=>i===8?'<div class="mcell q">?</div>':`<div class="mcell">${figSVG(g)}</div>`).join('')}</div>`,
+    fin,render:figSVG,kind:'figs',cols:3,explain});
+}
+
+/* ---------- 2. number series ---------- */
+const seqHTML=arr=>`<div class="seq">${arr.map(x=>`<span class="cell">${x}</span>`).join('')}<span class="cell q">?</span></div>`;
+function genNumSeq(r){
+  const fam=r.pick(['second','mulAdd','interleave','powers','fib','altOps']);
+  let shown,ans,extra,explain;
+  if(fam==='second'){
+    const a=r.int(2,25),d=r.int(1,5),k=r.int(2,4);const t=[a];let g=d;
+    for(let i=0;i<6;i++){t.push(t[i]+g);g+=k}
+    shown=t.slice(0,6);ans=t[6];const gaps=shown.slice(1).map((x,i)=>x-shown[i]);const lg=gaps.at(-1);
+    extra=[shown[5]+lg,ans+k,shown[5]+2*lg,ans+1];
+    explain=`The gaps between numbers grow by ${k} each time: ${gaps.join(', ')}. The next gap is ${lg+k}, so ${shown[5]} + ${lg+k} = ${ans}.`;
+  }else if(fam==='mulAdd'){
+    const m=r.pick([2,2,3]),a=r.int(2,6);let c=r.pick([-3,-2,-1,1,2,3,4,5]);if(a*(m-1)+c<=0)c=Math.abs(c);
+    const t=[a];for(let i=0;i<5;i++)t.push(t[i]*m+c);shown=t.slice(0,5);ans=t[5];
+    extra=[shown[4]*m,shown[4]*m+2*c,shown[4]*m-c,shown[4]+2*(shown[4]-shown[3])];
+    explain=`Each number is the one before it × ${m}, then ${signed(c)}. So ${shown[4]} × ${m} ${signed(c)} = ${ans}.`;
+  }else if(fam==='interleave'){
+    const a=r.int(1,9),s1=r.int(2,7),down=r.chance(.6);
+    const b=down?r.int(30,60):r.int(1,4),s2=down?r.int(3,7):r.pick([2,3]);
+    const A=i=>a+s1*i,B=i=>down?b-s2*i:b*s2**i;
+    const t=[];for(let i=0;i<8;i++)t.push(i%2===0?A(i/2):B((i-1)/2));
+    shown=t.slice(0,7);ans=t[7];
+    extra=[A(4),down?ans+s2:B(2)*(s2+1),down?ans-s2:ans+B(2),t[6]+(t[6]-t[4])];
+    explain=`Two series take turns. Positions 1, 3, 5, 7: ${[0,1,2,3].map(A).join(', ')} (+${s1} each time). Positions 2, 4, 6: ${[0,1,2].map(B).join(', ')} (${down?'−'+s2:'×'+s2} each time). The 8th number continues the second series: ${ans}.`;
+  }else if(fam==='powers'){
+    const p=r.chance(.7)?2:3,base=p===2?r.int(2,9):r.int(1,4);let c=r.pick([-2,-1,1,2,3,0]);if(base**p+c<1)c=1;
+    const sup=p===2?'²':'³',cs=c===0?'':` ${signed(c)}`;
+    const t=[];for(let i=0;i<6;i++)t.push((base+i)**p+c);shown=t.slice(0,5);ans=t[5];
+    extra=[(base+5)**p,(base+6)**p+c,shown[4]+(shown[4]-shown[3]),ans+(c||2)];
+    explain=`These are ${p===2?'square':'cube'} numbers${c?(c>0?` plus ${c}`:` minus ${-c}`):''}: ${shown.map((x,i)=>`${base+i}${sup}${cs}`).join(', ')}. Next is ${base+5}${sup}${cs} = ${ans}.`;
+  }else if(fam==='fib'){
+    const trib=r.chance(.35);let t;
+    if(!trib){t=[r.int(1,7),r.int(1,9)];while(t.length<7)t.push(t.at(-1)+t.at(-2));shown=t.slice(0,6)}
+    else{t=[r.int(0,3),r.int(1,3),r.int(1,4)];while(t.length<8)t.push(t.at(-1)+t.at(-2)+t.at(-3));shown=t.slice(0,7)}
+    ans=t.at(-1);const l1=shown.at(-1),l2=shown.at(-2),l3=shown.at(-3);
+    extra=trib?[l1+l2,ans+1,l1*2,ans-l3]:[l1+l2+l3,l1*2,ans+1,l1+(l1-l2)];
+    explain=trib?`Each number is the sum of the three before it. ${l3} + ${l2} + ${l1} = ${ans}.`:`Each number is the sum of the two before it. ${l2} + ${l1} = ${ans}.`;
+  }else{
+    const s=r.int(1,6),a=r.int(1,6),b=r.pick([2,3]),addFirst=r.chance(.5);const t=[s],ops=[];
+    for(let i=0;i<7;i++){const add=(i%2===0)===addFirst;t.push(add?t[i]+a:t[i]*b);ops.push(add)}
+    shown=t.slice(0,7);ans=t[7];const lastAdd=ops[6];
+    extra=[lastAdd?t[6]*b:t[6]+a,t[6]+(t[6]-t[5]),lastAdd?t[6]+a+1:t[6]*b+a,ans+a];
+    explain=`The steps alternate: ${addFirst?`+${a}, ×${b}`:`×${b}, +${a}`}, ${addFirst?`+${a}, ×${b}`:`×${b}, +${a}`} and so on. The next step is ${lastAdd?'+'+a:'×'+b}: ${t[6]} ${lastAdd?'+':'×'} ${lastAdd?a:b} = ${ans}.`;
+  }
+  return pack({prompt:'Which number comes next?',visual:seqHTML(shown),fin:numOpts(r,ans,extra),kind:'tiles',explain});
+}
+
+/* ---------- 3. letter series ---------- */
+function genLetterSeq(r){
+  const fam=r.pick(['grow','back','pairs','weave']);
+  let shown,ans,cands,explain;const ok=x=>x>=0&&x<26;
+  if(fam==='grow'){
+    const g0=r.int(1,2),s=r.int(0,25-(5*g0+10));const p=[s];let g=g0;for(let i=0;i<5;i++){p.push(p[i]+g);g++}
+    shown=p.slice(0,5).map(L);ans=L(p[5]);
+    cands=[p[5]-1,p[5]+1,p[5]+2,p[5]-2,p[5]-3,p[5]+3].filter(ok).map(L);
+    explain=`The jumps grow by one each time: +${g0}, +${g0+1}, +${g0+2}, +${g0+3}. The next jump is +${g0+4}: ${L(p[4])} → ${L(p[5])}.`;
+  }else if(fam==='back'){
+    const k=r.int(2,5),s=r.int(5*k,25);const P=i=>s-k*i;shown=[0,1,2,3,4].map(i=>L(P(i)));ans=L(P(5));
+    cands=[P(5)+1,P(5)-1,P(5)-k,P(5)+2,P(5)-2,P(5)+3].filter(ok).map(L);
+    explain=`Each letter is ${k} places earlier in the alphabet than the one before. ${L(P(4))} − ${k} = ${ans}.`;
+  }else if(fam==='pairs'){
+    const k1=r.int(1,3),k2=r.int(1,4),f0=r.int(0,25-4*k1),s0=r.int(4*k2,25);
+    const P=i=>L(f0+k1*i)+L(s0-k2*i);shown=[0,1,2,3].map(P);ans=P(4);const f=f0+4*k1,s=s0-4*k2;
+    cands=r.shuffle([[f+1,s],[f,s-1],[f-1,s],[f,s+1],[f+k1,s-k2],[f+1,s+1],[f-1,s-1]]).filter(([x,y])=>ok(x)&&ok(y)).map(([x,y])=>L(x)+L(y));
+    cands.push(L(s)+L(f));
+    explain=`First letters move forward ${k1}: ${shown.map(x=>x[0]).join(', ')}, ${L(f)}. Second letters move back ${k2}: ${shown.map(x=>x[1]).join(', ')}, ${L(s)}. The next pair is ${ans}.`;
+  }else{
+    const a=r.int(1,4),b=r.int(1,4),f0=r.int(0,25-4*a),s0=r.int(3*b+2,25);
+    const A=i=>f0+a*i,B=i=>s0-b*i;const t=[];for(let i=0;i<8;i++)t.push(i%2===0?A(i/2):B((i-1)/2));
+    shown=t.slice(0,7).map(L);ans=L(t[7]);
+    cands=[A(4),t[7]+1,t[7]-1,t[7]-b,t[7]+2,t[7]-2].filter(ok).map(L);
+    explain=`Two series take turns. ${[0,1,2,3].map(i=>L(A(i))).join(', ')} moves forward ${a}. ${[0,1,2].map(i=>L(B(i))).join(', ')} moves back ${b}. The 8th letter continues the second series: ${ans}.`;
+  }
+  return pack({prompt:'Which comes next in the series?',visual:seqHTML(shown),fin:finalize(r,ans,r.shuffle(cands),5),kind:'tiles',explain});
+}
+
+/* ---------- 4. symbol algebra ---------- */
+function genSymbols(r){
+  const sy=r.shuffle(['triangle','circle','square','star','diamond']).slice(0,3);
+  let v;do{v=[r.int(2,9),r.int(2,9),r.int(2,11)]}while(new Set(v).size<3);
+  const S=i=>({s:i}),O=o=>({o});
+  const join=arr=>arr.flatMap((x,i)=>i?[O('+'),x]:[x]);
+  const tokHTML=t=>t.map(x=>x.o?`<span class="op">${x.o}</span>`:symSVG(sy[x.s])).join('');
+  const eqs=[];
+  if(r.chance(.5))eqs.push({t:join([S(0),S(0),S(0)]),v:3*v[0]});else eqs.push({t:join([S(0),S(0)]),v:2*v[0]});
+  eqs.push({t:join(r.shuffle([S(0),S(1),S(1)])),v:v[0]+2*v[1]});
+  if(r.chance(.5))eqs.push({t:[S(1),O('×'),S(2)],v:v[1]*v[2]});else eqs.push({t:join(r.shuffle([S(2),S(2),S(1)])),v:2*v[2]+v[1]});
+  const [X,Y,Z]=r.shuffle([0,1,2]);const T=r.pick(['xy+z','xy-z','xx+y','xx-y']);
+  const ev=(T,X,Y,Z)=>T==='xy+z'?v[X]*v[Y]+v[Z]:T==='xy-z'?v[X]*v[Y]-v[Z]:T==='xx+y'?v[X]*v[X]+v[Y]:v[X]*v[X]-v[Y];
+  const ans=ev(T,X,Y,Z);if(ans<=0)return null;
+  const qt=T==='xy+z'?[S(X),O('×'),S(Y),O('+'),S(Z)]:T==='xy-z'?[S(X),O('×'),S(Y),O('−'),S(Z)]:T==='xx+y'?[S(X),O('×'),S(X),O('+'),S(Y)]:[S(X),O('×'),S(X),O('−'),S(Y)];
+  const extra=[];for(const p of [[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]])extra.push(ev(T,...p));
+  extra.push(v[0]+v[1]+v[2]);if(T==='xy+z')extra.push(v[X]*(v[Y]+v[Z]));
+  const shown=r.shuffle(eqs);
+  const qVals=qt.map(x=>x.o?x.o:v[x.s]).join(' ');
+  const explain=`Solve the symbols one at a time. ${tokHTML(eqs[0].t)} = ${eqs[0].v}, so ${symSVG(sy[0])} = ${v[0]}. Then ${tokHTML(eqs[1].t)} = ${eqs[1].v} gives ${symSVG(sy[1])} = ${v[1]}. Then ${tokHTML(eqs[2].t)} = ${eqs[2].v} gives ${symSVG(sy[2])} = ${v[2]}. So the last line is ${qVals} = ${ans} (multiply first).`;
+  return pack({prompt:'Each symbol stands for a whole number. What is the value of the last line?',
+    visual:`<div class="eqs">${shown.map(e=>`<div class="eq">${tokHTML(e.t)}<span class="op">=</span><span>${e.v}</span></div>`).join('')}<div class="eq ask">${tokHTML(qt)}<span class="op">=</span><span class="q">?</span></div></div>`,
+    fin:numOpts(r,ans,extra),kind:'tiles',explain});
+}
+
+/* ---------- 5. number grid ---------- */
+const GR=(n,f,x)=>({n,f,x});
+const GRID_RULES=[
+  GR('a + b',(a,b)=>a+b,(a,b)=>`${a} + ${b}`),GR('a × b',(a,b)=>a*b,(a,b)=>`${a} × ${b}`),GR('a − b',(a,b)=>a-b,(a,b)=>`${a} − ${b}`),
+  GR('2a + b',(a,b)=>2*a+b,(a,b)=>`2 × ${a} + ${b}`),GR('a + 2b',(a,b)=>a+2*b,(a,b)=>`${a} + 2 × ${b}`),
+  GR('3a + b',(a,b)=>3*a+b,(a,b)=>`3 × ${a} + ${b}`),GR('a + 3b',(a,b)=>a+3*b,(a,b)=>`${a} + 3 × ${b}`),
+  GR('2a − b',(a,b)=>2*a-b,(a,b)=>`2 × ${a} − ${b}`),GR('2b − a',(a,b)=>2*b-a,(a,b)=>`2 × ${b} − ${a}`),
+  GR('a² + b',(a,b)=>a*a+b,(a,b)=>`${a}² + ${b}`),GR('a² − b',(a,b)=>a*a-b,(a,b)=>`${a}² − ${b}`),
+  GR('a + b²',(a,b)=>a+b*b,(a,b)=>`${a} + ${b}²`),GR('b² − a',(a,b)=>b*b-a,(a,b)=>`${b}² − ${a}`),
+  GR('a² + b²',(a,b)=>a*a+b*b,(a,b)=>`${a}² + ${b}²`),GR('(a + b) × 2',(a,b)=>2*(a+b),(a,b)=>`(${a} + ${b}) × 2`),
+  GR('a × b + 1',(a,b)=>a*b+1,(a,b)=>`${a} × ${b} + 1`),GR('a × b − 1',(a,b)=>a*b-1,(a,b)=>`${a} × ${b} − 1`),
+  GR('a × b + a',(a,b)=>a*b+a,(a,b)=>`${a} × ${b} + ${a}`),GR('a × b − a',(a,b)=>a*b-a,(a,b)=>`${a} × ${b} − ${a}`),
+  GR('a × b + b',(a,b)=>a*b+b,(a,b)=>`${a} × ${b} + ${b}`),GR('a × b − b',(a,b)=>a*b-b,(a,b)=>`${a} × ${b} − ${b}`),
+  GR('(a + b)²',(a,b)=>(a+b)**2,(a,b)=>`(${a} + ${b})²`),GR('(a − b)²',(a,b)=>(a-b)**2,(a,b)=>`(${a} − ${b})²`),
+  GR('a × b + a + b',(a,b)=>a*b+a+b,(a,b)=>`${a} × ${b} + ${a} + ${b}`),GR('a × b − a − b',(a,b)=>a*b-a-b,(a,b)=>`${a} × ${b} − ${a} − ${b}`),
+  GR('a × b × 2',(a,b)=>2*a*b,(a,b)=>`${a} × ${b} × 2`),GR('(a + b) × 3',(a,b)=>3*(a+b),(a,b)=>`(${a} + ${b}) × 3`),
+];
+const GRID_PLAY=['2a + b','a + 2b','3a + b','a² + b','a² − b','a + b²','a × b + 1','a × b − 1','(a + b) × 2','a × b + a','a × b − b','a² + b²','a × b + a + b','(a + b)²'];
+function genNumGrid(r){
+  const want=r.pick(GRID_PLAY),rule=GRID_RULES.find(g=>g.n===want);
+  for(let t=0;t<200;t++){
+    const rows=[0,1,2].map(()=>[r.int(2,9),r.int(2,9)]);
+    if(rows.some(([a,b])=>a===b))continue;
+    if(new Set(rows.map(x=>x.join())).size<3)continue;
+    const vals=rows.map(([a,b])=>rule.f(a,b));if(vals.some(x=>x<=0))continue;
+    let ok=true;const alts=[];
+    for(const R of GRID_RULES){if(R===rule)continue;
+      const fits=R.f(...rows[0])===vals[0]&&R.f(...rows[1])===vals[1];
+      if(fits&&R.f(...rows[2])!==vals[2]){ok=false;break}
+      if(!fits)alts.push(R.f(...rows[2]));}
+    if(!ok)continue;
+    const ans=vals[2];
+    const explain=`In every row, the third number is ${rule.n.replace(/a/g,'A').replace(/b/g,'B')}, where A and B are the first two numbers. Row 1: ${rule.x(...rows[0])} = ${vals[0]}. Row 2: ${rule.x(...rows[1])} = ${vals[1]}. Row 3: ${rule.x(...rows[2])} = ${ans}.`;
+    return pack({prompt:'Every row follows the same rule. Which number replaces the question mark?',
+      visual:`<table class="ngrid"><tbody>${rows.map((rw,i)=>`<tr><td>${rw[0]}</td><td>${rw[1]}</td>${i===2?'<td class="q">?</td>':`<td>${vals[i]}</td>`}</tr>`).join('')}</tbody></table>`,
+      fin:numOpts(r,ans,r.shuffle(alts)),kind:'tiles',explain});
+  }
+  return null;
+}
+
+/* ---------- 6. code breaking ---------- */
+const WORDS=['PLANET','ROCKET','GARDEN','SILVER','BRIDGE','CASTLE','FOREST','MARKET','WINTER','ORANGE','PENCIL','SPIRIT','TUNNEL','VOYAGE','HARBOR','ISLAND','JUNGLE','KETTLE','LADDER','MIRROR','NEEDLE','OYSTER','PEPPER','RABBIT','SALMON','TEMPLE','VALLEY','WALNUT','BASKET','CANDLE','DRAGON','FALCON','HAMMER','LIZARD','MAGNET','NAPKIN','PARROT','QUARTZ','GOBLIN','THRONE','CIRCUS','POCKET'];
+const shiftCh=(c,k)=>L(mod(c.charCodeAt(0)-65+k,26));
+function enc(w,v){const a=[...w];
+  if(v.id==='shift')return a.map(c=>shiftCh(c,v.k)).join('');
+  if(v.id==='pos')return a.map((c,i)=>shiftCh(c,(i+1)*v.k)).join('');
+  if(v.id==='rev')return a.reverse().map(c=>shiftCh(c,v.k)).join('');
+  return a.map((c,i)=>shiftCh(c,i%2===0?v.k:-v.k)).join('');}
+function vdesc(v){const k=Math.abs(v.k),pl=k===1?'':'s',dir=v.k>0?'forward':'back';
+  if(v.id==='shift')return`Each letter moves ${k} place${pl} ${dir} in the alphabet`;
+  if(v.id==='pos')return`The 1st letter moves ${dir} 1 place, the 2nd moves 2, the 3rd moves 3, and so on`;
+  if(v.id==='rev')return v.k?`The word is written backwards, then each letter moves ${k} place${pl} ${dir}`:'The word is written backwards';
+  return`The letters alternate: ${v.k>0?'+':'−'}${k}, ${v.k>0?'−':'+'}${k}, ${v.k>0?'+':'−'}${k}, and so on`;}
+const VARIANTS=[...[1,2,3,4,-1,-2,-3].map(k=>({id:'shift',k})),{id:'pos',k:1},{id:'pos',k:-1},{id:'pos',k:2},...[0,1,2,-1].map(k=>({id:'rev',k})),...[1,2,-1,-2].map(k=>({id:'alt',k}))];
+function genCipher(r){
+  const [w1,w2]=r.shuffle(WORDS).slice(0,2);
+  const v=r.pick([{id:'shift',k:r.pick([1,2,3,-1,-2])},{id:'pos',k:r.pick([1,-1])},{id:'rev',k:r.pick([1,2,-1])},{id:'alt',k:r.pick([1,2,-1])}]);
+  const e1=enc(w1,v),ans=enc(w2,v);
+  for(const V of VARIANTS){if(enc(w1,V)===e1&&enc(w2,V)!==ans)return null}
+  const same=r.shuffle(VARIANTS.filter(V=>V.id===v.id)).map(V=>enc(w2,V));
+  const other=r.shuffle(VARIANTS.filter(V=>V.id!==v.id)).map(V=>enc(w2,V));
+  const i=r.int(0,5);const typo=ans.slice(0,i)+shiftCh(ans[i],r.pick([1,-1]))+ans.slice(i+1);
+  const cands=[...same.slice(0,2),typo,...other.slice(0,2),...same.slice(2),...other.slice(2)];
+  const explain=`${vdesc(v)}. ${w1} → ${e1}, and the same steps turn ${w2} into ${ans}.`;
+  return pack({prompt:`In a code, <b class="mono">${w1}</b> is written as <b class="mono">${e1}</b>. How is <b class="mono">${w2}</b> written in the same code?`,
+    visual:`<div class="codebox"><span>${w1}</span><span class="arrow">→</span><span>${e1}</span><span>${w2}</span><span class="arrow">→</span><span class="q">??????</span></div>`,
+    fin:finalize(r,ans,cands,5),kind:'list',mono:true,explain});
+}
+
+/* ---------- 7. verbal reasoning ---------- */
+const ANALOGIES=[
+  ['Petal','Flower','Page','Book',['Library','Word','Paper','Author'],'A petal is one part of a flower; a page is one part of a book.'],
+  ['Odometer','Distance','Thermometer','Temperature',['Pressure','Weather','Mercury','Fever'],'An odometer measures distance; a thermometer measures temperature.'],
+  ['Ornithologist','Birds','Entomologist','Insects',['Words','Fossils','Fish','Reptiles'],'An ornithologist studies birds; an entomologist studies insects.'],
+  ['Cub','Bear','Kid','Goat',['Sheep','Child','Deer','Horse'],'A cub is a young bear; a kid is a young goat.'],
+  ['Glove','Hand','Thimble','Finger',['Thread','Needle','Sewing','Wrist'],'A glove covers and protects a hand; a thimble covers and protects a finger.'],
+  ['Shard','Glass','Splinter','Wood',['Finger','Metal','Paper','Nail'],'A shard is a sharp broken piece of glass; a splinter is a sharp broken piece of wood.'],
+  ['Drought','Water','Famine','Food',['Disease','Hunger','Rain','Poverty'],'A drought is a severe shortage of water; a famine is a severe shortage of food.'],
+  ['Sculptor','Chisel','Painter','Brush',['Canvas','Easel','Gallery','Portrait'],'A chisel is the tool a sculptor works with; a brush is the tool a painter works with.'],
+  ['Fluent','Halting','Lucid','Muddled',['Clear','Bright','Spoken','Brief'],'Fluent and halting are opposites; lucid (clear) and muddled are opposites.'],
+  ['Inch','Foot','Month','Year',['Week','Day','Season','Decade'],'There are 12 inches in a foot and 12 months in a year.'],
+  ['Pride','Lions','Murder','Crows',['Wolves','Geese','Owls','Bees'],'A group of lions is a pride; a group of crows is a murder.'],
+  ['Novel','Chapter','Symphony','Movement',['Orchestra','Conductor','Note','Score'],'A novel is divided into chapters; a symphony is divided into movements.'],
+  ['Sapling','Tree','Tadpole','Frog',['Pond','Fish','Lizard','Egg'],'A sapling grows into a tree; a tadpole grows into a frog.'],
+  ['Cartographer','Maps','Lexicographer','Dictionaries',['Laws','Letters','Libraries','Calendars'],'A cartographer compiles maps; a lexicographer compiles dictionaries.'],
+  ['Ephemeral','Permanent','Scarce','Abundant',['Rare','Scared','Brief','Costly'],'Ephemeral is the opposite of permanent; scarce is the opposite of abundant.'],
+  ['Mile','Distance','Decibel','Loudness',['Speed','Weight','Brightness','Heat'],'A mile is a unit of distance; a decibel is a unit of loudness.'],
+  ['Composer','Score','Architect','Blueprint',['Building','Bricks','Studio','Ruler'],'A composer writes a score as the plan for a piece of music; an architect draws a blueprint as the plan for a building.'],
+  ['Prologue','Epilogue','Overture','Finale',['Encore','Interval','Aria','Prelude'],'A prologue opens a story and an epilogue closes it; an overture opens a musical work and a finale closes it.'],
+  ['Wax','Candle','Clay','Pot',['Kiln','Potter','Wheel','Glaze'],'A candle is made of wax; a pot is made of clay.'],
+  ['Archipelago','Islands','Constellation','Stars',['Planets','Galaxies','Moons','Comets'],'An archipelago is a group of islands; a constellation is a group of stars.'],
+  ['Frugal','Spendthrift','Timid','Daredevil',['Coward','Miser','Introvert','Pessimist'],'A spendthrift is the opposite of someone frugal; a daredevil is the opposite of someone timid.'],
+  ['Barometer','Pressure','Hygrometer','Humidity',['Altitude','Wind speed','Temperature','Rainfall'],'A barometer measures air pressure; a hygrometer measures humidity.'],
+  ['Write','Wrote','Fly','Flew',['Flown','Flied','Flight','Flying'],'"Wrote" is the simple past of "write"; "flew" is the simple past of "fly". "Flown" is the past participle.'],
+  ['Century','Decade','Decade','Year',['Month','Era','Millennium','Day'],'A century is ten decades; a decade is ten years.'],
+  ['Doctor','Patient','Lawyer','Client',['Judge','Court','Case','Jury'],'A doctor serves a patient; a lawyer serves a client.'],
+  ['Optimist','Hope','Skeptic','Doubt',['Faith','Fear','Anger','Truth'],'An optimist is defined by hope; a skeptic is defined by doubt.'],
+  ['Square','Cube','Circle','Sphere',['Cylinder','Cone','Ring','Oval'],'A cube is the 3D form of a square; a sphere is the 3D form of a circle.'],
+  ['Telescope','Distant','Microscope','Tiny',['Bright','Lens','Hidden','Slow'],'A telescope lets you see distant things; a microscope lets you see tiny things.'],
+  ['Verse','Poem','Scene','Play',['Actor','Stage','Curtain','Theatre'],'A poem is made up of verses; a play is made up of scenes.'],
+  ['Calf','Cow','Foal','Horse',['Pony','Donkey','Lamb','Stable'],'A calf is a young cow; a foal is a young horse.'],
+  ['Chef','Kitchen','Astronomer','Observatory',['Telescope','Planet','Galaxy','Laboratory'],'A chef works in a kitchen; an astronomer works in an observatory.'],
+  ['Ignite','Extinguish','Inflate','Deflate',['Expand','Puncture','Balloon','Pump'],'To extinguish undoes igniting; to deflate undoes inflating.'],
+  ['Tributary','River','Branch','Tree',['Leaf','Root','Forest','Bark'],'A tributary is a smaller stream joining a river; a branch is a smaller limb growing from a tree.'],
+];
+const ODDWORDS=[
+  [['Violin','Cello','Harp','Trumpet','Guitar'],'Trumpet','The others are string instruments; a trumpet is a brass instrument.'],
+  [['Square','Rhombus','Rectangle','Triangle','Trapezium'],'Triangle','The others all have four sides.'],
+  [['Copper','Iron','Bronze','Zinc','Silver'],'Bronze','Bronze is an alloy of copper and tin; the others are chemical elements.'],
+  [['Sparrow','Robin','Eagle','Bat','Owl'],'Bat','A bat is a mammal; the others are birds.'],
+  [['Whale','Dolphin','Shark','Seal','Walrus'],'Shark','A shark is a fish; the others are mammals.'],
+  [['Sonnet','Haiku','Limerick','Novella','Ode'],'Novella','A novella is a work of prose fiction; the others are kinds of poem.'],
+  [['Kilometre','Litre','Foot','Mile','Yard'],'Litre','A litre measures volume; the others measure length.'],
+  [['Ankle','Elbow','Knee','Wrist','Shin'],'Shin','The shin is not a joint; the others are.'],
+  [['Python','Cobra','Viper','Iguana','Mamba'],'Iguana','An iguana is a lizard; the others are snakes.'],
+  [['Lisbon','Madrid','Barcelona','Rome','Paris'],'Barcelona','Barcelona is not a capital city; the others are.'],
+  [['Oxygen','Hydrogen','Nitrogen','Water','Helium'],'Water','Water is a compound; the others are elements.'],
+  [['Baker','Butcher','Carpenter','Grocer','Fishmonger'],'Carpenter','A carpenter does not sell food; the others do.'],
+  [['Listen','Silent','Enlist','Tinsel','Lustre'],'Lustre','Listen, silent, enlist and tinsel are all anagrams of each other. Lustre uses different letters.'],
+  [['Calm','Placid','Serene','Tranquil','Turbulent'],'Turbulent','The others all mean peaceful.'],
+  [['Anger','Joy','Fear','Hunger','Sadness'],'Hunger','Hunger is a physical need; the others are emotions.'],
+  [['Mercury','Venus','Mars','Saturn','Pluto'],'Pluto','Pluto is classed as a dwarf planet; the others are planets.'],
+  [['Ruby','Emerald','Sapphire','Pearl','Diamond'],'Pearl','A pearl grows inside an oyster; the others are gemstones mined from rock.'],
+  [['Flute','Clarinet','Oboe','Saxophone','Trombone'],'Trombone','A trombone is a brass instrument; the others are woodwinds (the saxophone counts as a woodwind even though it is made of metal).'],
+  [['Triangle','Pentagon','Hexagon','Octagon','Cube'],'Cube','A cube is a solid; the others are flat shapes.'],
+];
+const VERBAL_BANK=[...ANALOGIES.map(a=>({an:a})),...ODDWORDS.map(o=>({odd:o}))];
+const VERBAL_ORDER=Rng(hashStr('quotient-verbal-bank')).shuffle(VERBAL_BANK.map((_,i)=>i));
+function genVerbal(r,ctx){
+  const item=ctx&&ctx.block!=null?VERBAL_BANK[VERBAL_ORDER[mod(ctx.block,VERBAL_BANK.length)]]:r.pick(VERBAL_BANK);
+  if(item.an){const [w1,w2,w3,ans,ds,e]=item.an;
+    return pack({prompt:`${w1} is to ${w2.toLowerCase()} as ${w3.toLowerCase()} is to what?`,
+      visual:`<div class="analogy"><span>${w1}</span><i>:</i><span>${w2}</span><i>::</i><span>${w3}</span><i>:</i><span class="q">?</span></div>`,
+      fin:finalize(r,ans,r.shuffle(ds),5),kind:'list',explain:e});}
+  const [words,ans,e]=item.odd;
+  return pack({prompt:'Which word does not belong with the others?',fin:finalize(r,ans,words.filter(w=>w!==ans),5),kind:'list',explain:e});
+}
+
+/* ---------- 8. deduction ---------- */
+const NAMES=['Ava','Ben','Cleo','Dev','Eli','Farah','Gus','Hana','Ivo','Jun','Kira','Leo','Mila','Nico','Omar','Pia','Raj','Sami','Tess','Uma','Wes','Yara'];
+const DIMS=[
+  {ctx:'Five friends compare their heights.',more:'is taller than',less:'is shorter than',ask:['Who is the tallest?','Who is the second tallest?','Who is the third tallest?','Who is the second shortest?','Who is the shortest?'],top:'tallest'},
+  {ctx:'Five cousins compare their ages.',more:'is older than',less:'is younger than',ask:['Who is the oldest?','Who is the second oldest?','Who is the third oldest?','Who is the second youngest?','Who is the youngest?'],top:'oldest'},
+  {ctx:'Five runners finish a race with no ties.',more:'finished ahead of',less:'finished behind',ask:['Who won?','Who finished 2nd?','Who finished 3rd?','Who finished 4th?','Who finished last?'],top:'winner'},
+  {ctx:'Five colleagues compare their salaries.',more:'earns more than',less:'earns less than',ask:['Who earns the most?','Who earns the second most?','Who earns the third most?','Who earns the second least?','Who earns the least?'],top:'highest earner'},
+];
+const PERM5=(()=>{const out=[];const rec=(a,rest)=>{if(!rest.length){const pos=[];a.forEach((p,i)=>pos[p]=i);out.push(pos);return}rest.forEach((x,i)=>rec([...a,x],rest.filter((_,j)=>j!==i)))};rec([],[0,1,2,3,4]);return out})();
+function fixes(clues,k){
+  const ext=PERM5.filter(pos=>clues.every(([i,j])=>pos[i]<pos[j]));
+  return ext.every(pos=>pos[k]===k&&[0,1,2,3,4].every(y=>y===k||(pos[y]<pos[k])===(y<k)));
+}
+function genLogic(r){
+  const dim=r.pick(DIMS),names=r.shuffle(NAMES).slice(0,5),k=r.int(1,3);
+  const pairs=[];for(let i=0;i<5;i++)for(let j=i+1;j<5;j++)pairs.push([i,j]);
+  for(let att=0;att<60;att++){
+    const clues=[];let good=false;
+    for(const p of r.shuffle(pairs)){clues.push(p);if(fixes(clues,k)){good=true;break}}
+    if(!good)continue;
+    for(const c of r.shuffle(clues.slice())){const rest=clues.filter(x=>x!==c);if(fixes(rest,k))clues.splice(clues.indexOf(c),1)}
+    if(clues.length<4||clues.length>6)continue;
+    const lines=clues.map(([i,j])=>r.chance(.5)?`${names[i]} ${dim.more} ${names[j]}.`:`${names[j]} ${dim.less} ${names[i]}.`);
+    const list=a=>a.length<2?a.join(''):a.slice(0,-1).join(', ')+' and '+a.at(-1);
+    const above=[0,1,2,3,4].filter(y=>y<k).map(y=>names[y]),below=[0,1,2,3,4].filter(y=>y>k).map(y=>names[y]);
+    const explain=`Following the chains of clues, ${list(above)} must rank above ${names[k]}, and ${list(below)} must rank below. With exactly ${k} ahead of ${names[k]}, that fixes ${names[k]} in position ${k+1} of 5 (counting from the ${dim.top}).`;
+    return pack({prompt:`${dim.ctx} ${dim.ask[k]}`,
+      visual:`<ul class="clues">${lines.map((l,i)=>`<li><span>${String(i+1).padStart(2,'0')}</span>${l}</li>`).join('')}</ul>`,
+      fin:finalize(r,names[k],names.filter((_,i)=>i!==k),5),kind:'list',explain});
+  }
+  return null;
+}
+
+/* ---------- 9. quantitative reasoning ---------- */
+const money=c=>`$${(c/100).toFixed(2)}`;
+const hm=m=>{const h=Math.floor(m/60),mm=m%60;return h?(mm?`${h} h ${mm} min`:`${h} h`):`${mm} min`};
+function genQuant(r){
+  const fam=r.pick(['age','pipes','speed','price','handshake','machines']);
+  if(fam==='age'){
+    for(let t=0;t<500;t++){
+      const S=r.int(4,14),k=r.int(3,7),n=r.int(2,24),F=k*S;if((F+n)%(S+n))continue;const m=(F+n)/(S+n);if(m<2||m>=k)continue;
+      const parent=r.pick(['mother','father']),child=r.pick(['son','daughter']),pp=parent==='mother'?'her':'his';
+      return pack({prompt:`A ${parent} is ${k} times as old as ${pp} ${child}. In ${n} years, the ${parent} will be ${m} times as old as the ${child}. How old is the ${child} now?`,long:true,
+        fin:numOpts(r,S,[F,S+n,(m-1)*n,S*2,S+m]),kind:'tiles',
+        explain:`Call the ${child}'s age s. The ${parent} is ${k}s, so ${k}s + ${n} = ${m}(s + ${n}). That gives ${k-m}s = ${(m-1)*n}, so s = ${S}. Check: in ${n} years they are ${F+n} and ${S+n}, and ${F+n} = ${m} × ${S+n}.`});
+    }
+    return null;
+  }
+  if(fam==='pipes'){
+    const [a,b]=r.pick([[2,3],[3,6],[4,12],[6,12],[5,20],[10,15],[4,6],[2,6],[3,12],[6,10],[4,5]]);
+    const ans=60*a*b/(a+b);if(!Number.isInteger(ans))return null;
+    const ex=[(a+b)/2*60,Math.min(a,b)*30,Math.abs(b-a)*60,ans+12,ans-12,ans+30,ans-20].filter(x=>Number.isInteger(x)&&x>0);
+    return pack({prompt:`Pipe A fills a tank in ${a} hours. Pipe B fills the same tank in ${b} hours. With both pipes running, how long does it take to fill the tank?`,long:true,
+      fin:finalize(r,ans,ex,5),render:hm,kind:'list',
+      explain:`Pipe A fills 1/${a} of the tank per hour and pipe B fills 1/${b}. Together that is 1/${a} + 1/${b} = ${a+b}/${a*b} of the tank per hour, so the tank takes ${a*b}/${a+b} hours = ${hm(ans)}.`});
+  }
+  if(fam==='speed'){
+    const [a,b]=r.pick([[30,60],[40,60],[60,90],[20,30],[45,90],[60,120],[36,45],[40,120],[24,40],[30,70],[50,75],[12,24]]);
+    const ans=2*a*b/(a+b);
+    return pack({prompt:`A cyclist rides from home to a lake at ${a} km/h and comes back along the same road at ${b} km/h. What is the average speed for the whole round trip, in km/h?`,long:true,
+      fin:numOpts(r,ans,[(a+b)/2,ans+4,ans-4,(a+b)/2+5,b-a]),kind:'tiles',
+      explain:`Take a distance d each way. The trip takes d/${a} + d/${b} hours, so the average speed is 2d ÷ (d/${a} + d/${b}) = 2 × ${a} × ${b} ÷ (${a} + ${b}) = ${ans} km/h. It is below the simple average ${(a+b)/2} because more time is spent at the slower speed.`});
+  }
+  if(fam==='price'){
+    const p=r.int(3,19)*5,d=r.int(20,90)*5,tot=2*p+d;
+    return pack({prompt:`A notebook and a pen cost ${money(tot)} together. The notebook costs ${money(d)} more than the pen. How much does the pen cost?`,long:true,
+      fin:finalize(r,p,r.shuffle([2*p,p+5,p>5?p-5:null,p+10,Math.round(d/2/5)*5,tot-p]).filter(x=>x>0),5),render:money,kind:'tiles',
+      explain:`If the pen costs p, the notebook costs p + ${money(d)}. So 2p + ${money(d)} = ${money(tot)}, which gives 2p = ${money(2*p)} and p = ${money(p)}. The quick answer, ${money(2*p)}, would make the notebook ${money(2*p+d)} and the total ${money(4*p+d)}.`});
+  }
+  if(fam==='handshake'){
+    const n=r.int(7,16),ans=n*(n-1)/2,chess=r.chance(.5);
+    return pack({prompt:chess?`In a chess tournament, each of ${n} players plays every other player exactly once. How many games are played in total?`:`At a meeting of ${n} people, everyone shakes hands with everyone else exactly once. How many handshakes take place?`,long:true,
+      fin:numOpts(r,ans,[n*(n-1),n*n,n*(n+1)/2,(n-1)*(n-1)]),kind:'tiles',
+      explain:`Each of the ${n} ${chess?'players faces':'people meets'} ${n-1} others: ${n} × ${n-1} = ${n*(n-1)}. That counts every ${chess?'game':'handshake'} twice (once from each side), so divide by 2: ${ans}.`});
+  }
+  const a=r.int(3,6),c=r.int(2,5),t=r.int(2,6),b=a+r.int(1,6),m=r.int(2,4),ans=b*c*m;
+  return pack({prompt:`${a} machines make ${a*c} parts in ${t} minutes. Working at the same rate, how many parts do ${b} machines make in ${t*m} minutes?`,long:true,
+    fin:numOpts(r,ans,[a*c*m,b*c,b*c*t*m,a*c*b,ans+b,b*c*(m+1)]),kind:'tiles',
+    explain:`Each machine makes ${c} parts every ${t} minutes. In ${t*m} minutes that is ${m} × ${c} = ${c*m} parts per machine, and ${b} machines make ${b} × ${c*m} = ${ans}.`});
+}
+
+/* ---------- 10. odd one out (numbers) ---------- */
+const isPrime=n=>{if(n<2)return false;for(let i=2;i*i<=n;i++)if(n%i===0)return false;return true};
+const isSq=n=>Number.isInteger(Math.sqrt(n));
+const isCube=n=>{const c=Math.round(Math.cbrt(n));return c*c*c===n};
+const TRI=new Set();for(let i=1;i<40;i++)TRI.add(i*(i+1)/2);
+const FIB=new Set([1,2,3,5,8,13,21,34,55,89,144,233,377]);
+const dsum=n=>String(n).split('').reduce((s,d)=>s+ +d,0);
+const isPal=n=>{const s=String(n);return s.length>1&&s===[...s].reverse().join('')};
+const ODD_PREDS=(()=>{const P=[[n=>n%2===0,true],[isPrime,true],[isSq,true],[isCube,true],[n=>TRI.has(n),false],[n=>FIB.has(n),false],[isPal,true],[n=>n>=100,true]];
+  for(let k=3;k<=13;k++)P.push([n=>n%k===0,k===5||k===10]);
+  for(let s=1;s<=27;s++)P.push([n=>dsum(n)===s,false]);
+  for(let d=0;d<=9;d++)P.push([n=>n%10===d,false]);return P})();
+const smallestFactor=n=>{for(let i=2;i*i<=n;i++)if(n%i===0)return i;return n};
+function genOddNum(r){
+  const fam=r.pick(['prime','square','mult','dsum','tri']);
+  for(let t=0;t<400;t++){
+    let mem,odd,explain;
+    if(fam==='prime'){const pr=[];for(let i=11;i<98;i++)if(isPrime(i))pr.push(i);mem=r.shuffle(pr).slice(0,4);odd=r.pick([21,27,33,39,49,51,57,63,69,77,81,87,91,93]);
+      const f=smallestFactor(odd);explain=`${mem.slice().sort((a,b)=>a-b).join(', ')} are all prime. ${odd} is not: ${odd} = ${f} × ${odd/f}.`}
+    else if(fam==='square'){const bs=r.shuffle([4,5,6,7,8,9,10,11,12,13,14,15]).slice(0,4);mem=bs.map(b=>b*b);const q=r.int(4,15);odd=q*q+r.pick([-3,-2,-1,1,2,3]);if(isSq(odd))continue;
+      explain=`${bs.slice().sort((a,b)=>a-b).map(b=>`${b*b} = ${b}²`).join(', ')} are perfect squares. ${odd} is not.`}
+    else if(fam==='mult'){const k=r.pick([6,7,8,9,11,12,13]);const ms=[];for(let i=k;i<=99;i+=k)if(i>=12)ms.push(i);mem=r.shuffle(ms).slice(0,4);odd=k*r.int(2,7)+r.int(1,k-1);if(odd>99||odd<10)continue;
+      explain=`${mem.slice().sort((a,b)=>a-b).join(', ')} are all multiples of ${k}. ${odd} is not (${odd} ÷ ${k} leaves ${odd%k}).`}
+    else if(fam==='dsum'){const s=r.int(7,13);const pool=[];for(let i=10;i<100;i++)if(dsum(i)===s)pool.push(i);mem=r.shuffle(pool).slice(0,4);const s2=s+r.pick([-1,1]);const p2=[];for(let i=10;i<100;i++)if(dsum(i)===s2)p2.push(i);odd=r.pick(p2);
+      explain=`The digits of ${mem.slice().sort((a,b)=>a-b).join(', ')} each add up to ${s}. The digits of ${odd} add up to ${s2}.`}
+    else{const tr=[...TRI].filter(x=>x>=10&&x<=136);mem=r.shuffle(tr).slice(0,4);odd=r.pick(tr)+r.pick([-2,-1,1,2]);if(TRI.has(odd))continue;
+      explain=`${mem.slice().sort((a,b)=>a-b).join(', ')} are triangular numbers (1, 3, 6, 10, 15, 21, …, each adding one more than the last step). ${odd} is not one.`}
+    if(mem.includes(odd)||mem.length<4)continue;
+    const nums=[...mem,odd];let ok=true;
+    for(const [f,single] of ODD_PREDS){const yes=nums.filter(f);
+      if(yes.length===4&&nums.find(x=>!f(x))!==odd){ok=false;break}
+      if(single&&yes.length===1&&yes[0]!==odd){ok=false;break}}
+    if(!ok)continue;
+    return pack({prompt:'Which number does not belong with the others?',fin:finalize(r,odd,r.shuffle(mem),5),kind:'tiles',explain});
+  }
+  return null;
+}
+
+/* ---------- 11. visual series ---------- */
+function genSeries(r){
+  const step=r.pick([45,90,135,-45,-90]),a0=r.pick([0,45,90,135,180,225,270,315]),ds=r.pick([1,-1,2,1]),d0=r.int(0,3);
+  const cyc=r.pick([['solid','outline'],['solid','outline','outline'],['outline','solid','hatched'],['hatched','solid']]);
+  const F=i=>({a:mod(a0+step*i,360),d:mod(d0+ds*i,4),f:cyc[i%cyc.length]});
+  const frames=[0,1,2,3,4].map(F),ans=F(5);
+  const angs=[...new Set([ans.a,mod(ans.a-step,360),mod(ans.a+step,360),mod(ans.a+180,360)])],fl=[...new Set(cyc)];
+  const pool=[];for(const a of angs)for(let d=0;d<4;d++)for(const f of fl){const h=(a!==ans.a)+(d!==ans.d)+(f!==ans.f);if(h>=1&&h<=2)pool.push({a,d,f})}
+  const fin=finalize(r,ans,sampleNoConsensus(r,ans,pool,4,['a','d','f']),5,o=>`${o.a}-${o.d}-${o.f}`);
+  const dotMove=ds===2?'jumps to the opposite corner':`moves one corner ${ds>0?'clockwise':'anticlockwise'}`;
+  const explain=`The arrow turns ${Math.abs(step)}° ${step>0?'clockwise':'anticlockwise'} each step, the dot ${dotMove}, and the fill repeats ${cyc.map(f=>FILL_NAME[f]).join(', ')}. Panel 6 therefore has a ${FILL_NAME[ans.f]} arrow pointing ${DIRS[ans.a/45]} with the dot in the ${CORNER_NAME[ans.d]} corner.`;
+  return pack({prompt:'Which panel comes next?',
+    visual:`<div class="series">${frames.map(f=>`<div class="panel">${arrowSVG(f)}</div>`).join('')}<div class="panel q">?</div></div>`,
+    fin,render:arrowSVG,kind:'figs',cols:5,explain});
+}
+
+/* ---------- daily selection ---------- */
+const TYPES=[
+  ['matrix','Matrix reasoning',genMatrix],['numseq','Number series',genNumSeq],['verbal','Verbal reasoning',genVerbal],
+  ['symbols','Symbol algebra',genSymbols],['letters','Letter series',genLetterSeq],['logic','Deduction',genLogic],
+  ['cipher','Code breaking',genCipher],['grid','Number grid',genNumGrid],['series','Visual series',genSeries],
+  ['oddnum','Odd one out',genOddNum],['quant','Quantitative reasoning',genQuant],
+];
+const EPOCH_UTC=Date.UTC(2026,10,9);
+const dayNum=key=>{const [y,m,d]=key.split('-').map(Number);return Math.round((Date.UTC(y,m-1,d)-EPOCH_UTC)/864e5)+1};
+const rawOrder=b=>Rng(hashStr('quotient-order:'+b)).shuffle(TYPES.map((_,i)=>i));
+function typeForDay(n){
+  const len=TYPES.length,idx=n-1,block=Math.floor(idx/len),pos=mod(idx,len);
+  const o=rawOrder(block);if(o[0]===rawOrder(block-1)[len-1])[o[0],o[1]]=[o[1],o[0]];
+  return{idx:o[pos],block};
+}
+function makePuzzle(seed,typeIdx,ctx){
+  const r=Rng(hashStr(seed));const gen=TYPES[typeIdx][2];
+  for(let t=0;t<80;t++){const p=gen(r,ctx||{});if(p&&p.answer>=0&&p.options.length>=5&&new Set(p.options).size===p.options.length)return{...p,typeIdx}}
+  return{...genNumSeq(Rng(hashStr(seed+':fallback'))),typeIdx:1};
+}
+// GEN-END
+
+/* ---------- app ---------- */
+const $=s=>document.querySelector(s);
+const app=$('#app');
+const STORE='quotient.v1';
+function load(){try{const d=JSON.parse(localStorage.getItem(STORE));return d&&d.h?d:{h:{}}}catch(e){return{h:{}}}}
+function save(){try{localStorage.setItem(STORE,JSON.stringify(db))}catch(e){}}
+let db=load();
+const pad=n=>String(n).padStart(2,'0');
+const pad3=n=>String(Math.max(0,n)).padStart(3,'0');
+const keyOf=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const keyAdd=(key,delta)=>{const [y,m,d]=key.split('-').map(Number);return keyOf(new Date(y,m-1,d+delta))};
+const keyDate=key=>{const [y,m,d]=key.split('-').map(Number);return new Date(y,m-1,d)};
+const fmtMs=ms=>{const s=Math.max(0,Math.floor(ms/1000)),h=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=s%60;return h?`${h}:${pad(m)}:${pad(ss)}`:`${m}:${pad(ss)}`};
+
+let today,cur,sel=null;
+function setupDaily(){
+  today=keyOf(new Date());const n=dayNum(today);const {idx,block}=typeForDay(n);
+  cur={mode:'daily',key:today,n,puzzle:makePuzzle('quotient:'+today,idx,{block}),rec:db.h[today]||{}};
+  sel=cur.rec.done?cur.rec.pick:null;
+}
+function setupPractice(){
+  const idx=Math.floor(Math.random()*TYPES.length);
+  cur={mode:'practice',key:null,n:null,puzzle:makePuzzle('practice:'+Math.random(),idx,{}),rec:{startedAt:Date.now()}};
+  sel=null;
+}
+
+function stats(){
+  const keys=Object.keys(db.h).filter(k=>db.h[k]&&db.h[k].done).sort();
+  const wins=keys.filter(k=>db.h[k].correct);
+  let streak=0,k=today;if(!(db.h[k]&&db.h[k].done))k=keyAdd(k,-1);
+  while(db.h[k]&&db.h[k].done&&db.h[k].correct){streak++;k=keyAdd(k,-1)}
+  let best=0,run=0,prev=null;
+  for(const kk of keys){const w=db.h[kk].correct;run=w?(prev&&keyAdd(prev,1)===kk&&db.h[prev].correct?run+1:1):0;best=Math.max(best,run);prev=kk}
+  const times=wins.map(k=>db.h[k].ms).filter(Number.isFinite);
+  const byType={};keys.forEach(k=>{const t=db.h[k].type||'—';byType[t]=byType[t]||[0,0];byType[t][1]++;if(db.h[k].correct)byType[t][0]++});
+  return{played:keys.length,rate:keys.length?Math.round(100*wins.length/keys.length):0,streak,best,avg:times.length?times.reduce((a,b)=>a+b,0)/times.length:null,byType};
+}
+function last7(){
+  return[6,5,4,3,2,1,0].map(i=>{const k=keyAdd(today,-i),h=db.h[k];return{k,s:h&&h.done?(h.correct?'w':'l'):'',day:keyDate(k).toLocaleDateString('en-GB',{weekday:'short'}).slice(0,2)}});
+}
+function statsHTML(){
+  const s=stats();
+  return`<div class="statrow"><div class="stat"><b>${s.played}</b><span>Played</span></div><div class="stat"><b>${s.rate}%</b><span>Solved</span></div><div class="stat"><b>${s.streak}</b><span>Streak</span></div><div class="stat"><b>${s.best}</b><span>Best</span></div></div>
+  <div class="week" aria-label="Last seven days">${last7().map(d=>`<div class="d"><span class="dot ${d.s} ${d.k===today?'t':''}" title="${d.k}"></span>${d.day}</div>`).join('')}</div>`;
+}
+
+function render(){
+  const p=cur.puzzle,rec=cur.rec,started=!!rec.startedAt,done=!!rec.done,locked=!started;
+  const label=TYPES[p.typeIdx][1],daily=cur.mode==='daily';
+  const date=daily?keyDate(cur.key).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'}):'Unscored';
+  const opts=p.options.map((o,i)=>{
+    let cls='opt';if(done){if(i===p.answer)cls+=' is-correct';else if(i===rec.pick)cls+=' is-wrong';else cls+=' dim'}
+    return`<button type="button" class="${cls}" data-i="${i}" aria-pressed="${sel===i}" ${done||locked?'disabled':''} aria-label="Option ${L(i)}"><span class="bubble">${L(i)}</span><span class="otext">${o}</span></button>`}).join('');
+  let html=`<div class="formstrip"><span>${daily?`Item <b>№ ${pad3(cur.n)}</b>`:'<b>Practice</b>'}</span><span>${date}</span><span>Section ${p.typeIdx+1} · <b>${label}</b></span></div>
+  <article class="sheet ${locked?'locked':''}" style="margin-top:16px">
+    <div class="sheet-head"><span class="eyebrow">${daily?'Today’s item':'Practice item'}</span><span class="clock ${done?'stopped':''}" id="clock">${done?fmtMs(rec.ms):started?fmtMs(Date.now()-rec.startedAt):'0:00'}</span></div>
+    <div class="content" ${locked?'aria-hidden="true"':''}>
+      <h2 class="prompt ${p.long?'long':''}">${p.prompt}</h2>
+      ${p.visual?`<div class="visual">${p.visual}</div>`:''}
+      <p class="mark-label">Mark one answer</p>
+      <div class="opts ${p.kind} ${p.mono?'mono':''}" style="--cols:${p.cols}">${opts}</div>
+      ${done?'':`<button type="button" class="primary" id="submit" ${sel==null?'disabled':''}>Submit answer</button><p class="hint">One attempt. Keys A–${L(p.options.length-1)} select, Enter submits.</p>`}
+    </div>
+    ${locked?`<div class="gate"><div class="gate-card"><span class="eyebrow">Item № ${pad3(cur.n)} · ${label}</span><p class="gate-title">Today’s item is ready.</p><p>The clock starts when you open it, and you get one attempt. Everyone gets the same item today.</p><button type="button" class="primary" id="start">Open item</button></div></div>`:''}
+  </article>`;
+  if(done){
+    html+=`<section class="slip ${rec.correct?'ok':'no'}" id="slip" style="margin-top:16px">
+      <div class="verdict"><span class="stamp">${rec.correct?'Correct':'Incorrect'}</span><span class="bigtime">${fmtMs(rec.ms)}<small>${rec.correct?'Solve time':'Time taken'}</small></span></div>
+      <div class="why"><h3>Answer ${L(p.answer)} · How it works</h3><p>${p.explain}</p></div>
+      ${daily?`<div><h3>Your record</h3>${statsHTML()}</div>
+      <div class="actions"><button type="button" class="primary" id="share">Copy result</button><button type="button" class="secondary" id="go-practice">Practice another</button></div>
+      <textarea id="sharebox" rows="3" readonly hidden></textarea>
+      <p class="next">Next item in <b id="countdown">--:--:--</b></p>`
+      :`<div class="actions"><button type="button" class="primary" id="go-practice">Next practice item</button><button type="button" class="secondary" id="go-daily">Back to today’s item</button></div>`}
+    </section>`;
+  }else if(!daily){
+    html+=`<p class="foot" style="margin-top:12px"><span>Practice items are random and don’t affect your stats.</span><button type="button" class="linkbtn" id="go-daily">Back to today’s item</button></p>`;
+  }
+  app.innerHTML=html;
+  $('#btn-practice').hidden=!daily;
+  tick();
+}
+
+function tick(){
+  const el=$('#clock');
+  if(el&&cur.rec.startedAt&&!cur.rec.done)el.textContent=fmtMs(Date.now()-cur.rec.startedAt);
+  const cd=$('#countdown');
+  if(cd){const now=new Date(),nx=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1);const s=Math.floor((nx-now)/1000);cd.textContent=`${pad(Math.floor(s/3600))}:${pad(Math.floor(s%3600/60))}:${pad(s%60)}`}
+  if(cur.mode==='daily'&&keyOf(new Date())!==today&&!(cur.rec.startedAt&&!cur.rec.done)){setupDaily();render()}
+}
+setInterval(tick,500);
+
+function choose(i){if(!cur.rec.startedAt||cur.rec.done)return;sel=i;app.querySelectorAll('.opt').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.i===i)));const s=$('#submit');if(s)s.disabled=false}
+function submit(){
+  if(sel==null||cur.rec.done||!cur.rec.startedAt)return;
+  const r=cur.rec;r.done=true;r.pick=sel;r.correct=sel===cur.puzzle.answer;r.ms=Date.now()-r.startedAt;r.type=TYPES[cur.puzzle.typeIdx][1];
+  if(cur.mode==='daily'){db.h[cur.key]=r;save()}
+  render();const slip=$('#slip');if(slip)slip.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
+}
+function shareText(){
+  const r=cur.rec,s=stats();
+  return`DailyQ № ${pad3(cur.n)} · ${TYPES[cur.puzzle.typeIdx][1]}\n${r.correct?'✅ Solved':'❌ Missed'} in ${fmtMs(r.ms)}${s.streak?` · 🔥 ${s.streak}`:''}\n${last7().map(d=>d.s==='w'?'🟩':d.s==='l'?'🟥':'⬜').join('')}`;
+}
+function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,1800)}
+function share(){
+  const text=shareText(),box=$('#sharebox');
+  const fallback=()=>{box.value=text;box.hidden=false;box.focus();box.select();toast('Select and copy the text below')};
+  try{navigator.clipboard.writeText(text).then(()=>toast('Result copied'),fallback)}catch(e){fallback()}
+}
+
+app.addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  if(b.id==='start'){cur.rec={startedAt:Date.now()};db.h[cur.key]=cur.rec;save();render();const f=app.querySelector('.opt');if(f)f.focus({preventScroll:true});return}
+  if(b.classList.contains('opt'))return choose(+b.dataset.i);
+  if(b.id==='submit')return submit();
+  if(b.id==='share')return share();
+  if(b.id==='go-practice'){setupPractice();render();window.scrollTo(0,0);return}
+  if(b.id==='go-daily'){setupDaily();render();window.scrollTo(0,0);return}
+});
+$('#btn-practice').addEventListener('click',()=>{setupPractice();render();window.scrollTo(0,0)});
+document.addEventListener('keydown',e=>{
+  if(!$('#ov').hidden){if(e.key==='Escape')closeOv();return}
+  if(e.metaKey||e.ctrlKey||e.altKey)return;
+  const n=cur.puzzle.options.length,code=e.key.toUpperCase().charCodeAt(0)-65;
+  if(e.key.length===1&&code>=0&&code<n)choose(code);
+  else if(e.key==='Enter'&&sel!=null&&!cur.rec.done&&cur.rec.startedAt&&!e.target.closest('.opt')){e.preventDefault();submit()}
+});
+
+/* overlay */
+function openOv(html){const b=$('#ovbody');b.innerHTML=html;$('#ov').hidden=false;const c=b.querySelector('.ghost');if(c)c.focus()}
+function closeOv(){$('#ov').hidden=true}
+$('#ov').addEventListener('click',e=>{if(e.target.id==='ov'||e.target.closest('[data-close]'))closeOv()});
+$('#btn-help').addEventListener('click',()=>openOv(`<div class="modal-head"><h2 id="ov-title">How to play</h2><button class="ghost" data-close type="button">Close</button></div>
+  <ul><li>One reasoning item a day. Every player gets the same one.</li><li>Open the item to start the clock, mark one answer, then submit. You get one attempt.</li><li>Afterwards you’ll see the rule behind the answer, your streak, and a result you can copy and share without spoilers.</li><li>A new item appears at midnight in your time zone.</li></ul>
+  <p>Items rotate through eleven sections, so no section repeats within any run of eleven days:</p>
+  <ul class="cats">${TYPES.map((t,i)=>`<li><span>${pad(i+1)}</span>${t[1]}</li>`).join('')}</ul>
+  <p style="font-size:14px;color:var(--muted)">Practice mode serves random items from any section and never touches your stats. Your record is stored in this browser only.</p>`));
+$('#btn-stats').addEventListener('click',()=>{const s=stats();const bt=Object.entries(s.byType);
+  openOv(`<div class="modal-head"><h2 id="ov-title">Your record</h2><button class="ghost" data-close type="button">Close</button></div>${statsHTML()}
+  <p style="font-family:var(--f-mono);font-size:13px;color:var(--muted)">Average solve time: <b style="color:var(--ink)">${s.avg==null?'—':fmtMs(s.avg)}</b></p>
+  ${bt.length?`<div class="bytype">${bt.map(([t,[w,n]])=>`<div><span>${t}</span><b>${w}/${n}</b></div>`).join('')}</div>`:'<p style="color:var(--muted)">Solve your first daily item to start a record.</p>'}`)});
+
+setupDaily();render();
+</script>
+
+</body>
+</html>
