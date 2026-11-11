@@ -826,7 +826,7 @@ function submit(){
 }
 function shareText(){
   const r=cur.rec,s=stats();
-  return`DailyQ № ${pad3(cur.n)} · ${TYPES[cur.puzzle.typeIdx][1]}\n${r.correct?'✅ Solved':'❌ Missed'} in ${fmtMs(r.ms)}${s.streak?` · 🔥 ${s.streak}`:''}\n${last7().map(d=>d.s==='w'?'🟩':d.s==='l'?'🟥':'⬜').join('')}`;
+  return`DailyQ № ${pad3(cur.n)} · ${TYPES[cur.puzzle.typeIdx][1]}\n${r.correct?'✅ Solved':'❌ Missed'} in ${fmtMs(r.ms)}${s.streak?` · 🔥 ${s.streak}`:''}\n${last7().map(d=>d.s==='w'?'🟩':d.s==='l'?'🟥':'⬜').join('')}\nPlay today’s puzzle: https://dmeredith7.github.io/DailyQ/`;
 }
 function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,1800)}
 function share(){
